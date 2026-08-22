@@ -49,17 +49,32 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             archive
 
+      - name: Debug - list archive contents
+        run: |
+          echo "Looking for .xcarchive under ios/build:"
+          find ios/build -maxdepth 1 -name "*.xcarchive"
+          echo "---"
+          ARCHIVE_PATH=$(find ios/build -maxdepth 1 -name "*.xcarchive" | head -n1)
+          echo "Contents of $ARCHIVE_PATH/Products/Applications (if exists):"
+          ls -la "$ARCHIVE_PATH/Products/Applications" || echo "Applications folder not found"
+          echo "Full archive tree:"
+          find "$ARCHIVE_PATH" -maxdepth 4
+
       - name: Package unsigned ipa
         run: |
-          cd ios/build/app.xcarchive/Products/Applications
+          ARCHIVE_PATH=$(find ios/build -maxdepth 1 -name "*.xcarchive" | head -n1)
+          echo "Using archive: $ARCHIVE_PATH"
+          cd "$ARCHIVE_PATH/Products/Applications"
           APP=$(ls -d *.app)
           echo "Found app bundle: $APP"
           mkdir Payload
           mv "$APP" Payload/
           zip -r app-unsigned.ipa Payload
+          mkdir -p "$GITHUB_WORKSPACE/output"
+          cp app-unsigned.ipa "$GITHUB_WORKSPACE/output/"
 
       - name: Upload ipa artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-unsigned-ipa
-          path: ios/build/app.xcarchive/Products/Applications/app-unsigned.ipa
+          path: output/app-unsigned.ipa
