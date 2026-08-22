@@ -26,22 +26,21 @@ jobs:
           cd ios
           pod install --repo-update
 
-      - name: Detect workspace & scheme
+      - name: List available schemes (for debugging)
         run: |
           cd ios
           WORKSPACE=$(ls -d *.xcworkspace)
-          SCHEME=$(xcodebuild -list -workspace "$WORKSPACE" | awk '/Schemes:/{flag=1;next}/^$/{flag=0}flag' | sed 's/^ *//' | head -n1)
-          echo "Detected workspace: $WORKSPACE"
-          echo "Detected scheme: $SCHEME"
-          echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
-          echo "SCHEME=$SCHEME" >> $GITHUB_ENV
+          echo "Workspace: $WORKSPACE"
+          echo "All schemes:"
+          xcodebuild -list -workspace "$WORKSPACE"
 
       - name: Build (unsigned)
         run: |
           cd ios
+          WORKSPACE=$(ls -d *.xcworkspace)
           xcodebuild \
             -workspace "$WORKSPACE" \
-            -scheme "$SCHEME" \
+            -scheme "XMediaCollector" \
             -configuration Release \
             -sdk iphoneos \
             -derivedDataPath build \
