@@ -49,20 +49,21 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             build
 
-      - name: Debug - list build products
-        run: |
-          echo "Products under ios/build/Build/Products:"
-          find ios/build/Build/Products -maxdepth 2
-
       - name: Package unsigned ipa
         run: |
-          APP_DIR=$(find ios/build/Build/Products -maxdepth 1 -type d -name "Release-iphoneos")
-          echo "App dir: $APP_DIR"
+          echo "Searching for .app bundle under ios/build ..."
+          APP_PATH=$(find ios/build -type d -iname "*.app" | grep -v "\.framework" | head -n1)
+          echo "Found app bundle at: $APP_PATH"
+          if [ -z "$APP_PATH" ]; then
+            echo "No .app bundle found! Full tree under ios/build:"
+            find ios/build -maxdepth 6
+            exit 1
+          fi
+          APP_DIR=$(dirname "$APP_PATH")
+          APP_NAME=$(basename "$APP_PATH")
           cd "$APP_DIR"
-          APP=$(ls -d *.app)
-          echo "Found app bundle: $APP"
           mkdir Payload
-          mv "$APP" Payload/
+          mv "$APP_NAME" Payload/
           zip -r app-unsigned.ipa Payload
           mkdir -p "$GITHUB_WORKSPACE/output"
           cp app-unsigned.ipa "$GITHUB_WORKSPACE/output/"
