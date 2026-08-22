@@ -29,7 +29,7 @@ jobs:
       - name: Detect workspace & scheme
         run: |
           cd ios
-          WORKSPACE=$(ls *.xcworkspace)
+          WORKSPACE=$(ls -d *.xcworkspace)
           SCHEME=$(xcodebuild -list -workspace "$WORKSPACE" | awk '/Schemes:/{flag=1;next}/^$/{flag=0}flag' | sed 's/^ *//' | head -n1)
           echo "Detected workspace: $WORKSPACE"
           echo "Detected scheme: $SCHEME"
