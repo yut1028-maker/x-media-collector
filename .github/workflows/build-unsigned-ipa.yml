@@ -1,0 +1,65 @@
+name: Build unsigned iOS ipa
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install JS dependencies
+        run: npm install
+
+      - name: Expo prebuild (generate native iOS project)
+        run: npx expo prebuild --platform ios --non-interactive
+
+      - name: Install CocoaPods dependencies
+        run: |
+          cd ios
+          pod install --repo-update
+
+      - name: Detect workspace & scheme
+        run: |
+          cd ios
+          WORKSPACE=$(ls *.xcworkspace)
+          SCHEME=$(xcodebuild -list -workspace "$WORKSPACE" | awk '/Schemes:/{flag=1;next}/^$/{flag=0}flag' | sed 's/^ *//' | head -n1)
+          echo "Detected workspace: $WORKSPACE"
+          echo "Detected scheme: $SCHEME"
+          echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
+          echo "SCHEME=$SCHEME" >> $GITHUB_ENV
+
+      - name: Archive (unsigned)
+        run: |
+          cd ios
+          xcodebuild \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath build/app.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            archive
+
+      - name: Package unsigned ipa
+        run: |
+          cd ios/build/app.xcarchive/Products/Applications
+          APP=$(ls -d *.app)
+          echo "Found app bundle: $APP"
+          mkdir Payload
+          mv "$APP" Payload/
+          zip -r app-unsigned.ipa Payload
+
+      - name: Upload ipa artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-unsigned-ipa
+          path: ios/build/app.xcarchive/Products/Applications/app-unsigned.ipa
