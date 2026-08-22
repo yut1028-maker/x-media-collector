@@ -36,7 +36,7 @@ jobs:
           echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
           echo "SCHEME=$SCHEME" >> $GITHUB_ENV
 
-      - name: Archive (unsigned)
+      - name: Build (unsigned)
         run: |
           cd ios
           xcodebuild \
@@ -44,27 +44,21 @@ jobs:
             -scheme "$SCHEME" \
             -configuration Release \
             -sdk iphoneos \
-            -archivePath build/app.xcarchive \
+            -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            archive
+            build
 
-      - name: Debug - list archive contents
+      - name: Debug - list build products
         run: |
-          echo "Looking for .xcarchive under ios/build:"
-          find ios/build -maxdepth 1 -name "*.xcarchive"
-          echo "---"
-          ARCHIVE_PATH=$(find ios/build -maxdepth 1 -name "*.xcarchive" | head -n1)
-          echo "Contents of $ARCHIVE_PATH/Products/Applications (if exists):"
-          ls -la "$ARCHIVE_PATH/Products/Applications" || echo "Applications folder not found"
-          echo "Full archive tree:"
-          find "$ARCHIVE_PATH" -maxdepth 4
+          echo "Products under ios/build/Build/Products:"
+          find ios/build/Build/Products -maxdepth 2
 
       - name: Package unsigned ipa
         run: |
-          ARCHIVE_PATH=$(find ios/build -maxdepth 1 -name "*.xcarchive" | head -n1)
-          echo "Using archive: $ARCHIVE_PATH"
-          cd "$ARCHIVE_PATH/Products/Applications"
+          APP_DIR=$(find ios/build/Build/Products -maxdepth 1 -type d -name "Release-iphoneos")
+          echo "App dir: $APP_DIR"
+          cd "$APP_DIR"
           APP=$(ls -d *.app)
           echo "Found app bundle: $APP"
           mkdir Payload
